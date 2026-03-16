@@ -42,7 +42,7 @@ class Rfem6ApiAdapter:
 
     def leer_modelo_postensado(
         self,
-        model_path: str,
+        model_path: str | None = None,
         max_member_scan: int = 5000,
         stop_after_missing: int = 250,
     ) -> dict[str, object]:
@@ -52,7 +52,7 @@ class Rfem6ApiAdapter:
             )
 
         with rfem.Application(**self._application_kwargs()) as app:
-            app.open_model(path=model_path)
+            resolved_model = self._resolve_model_context(app, model_path)
             all_members = self._get_all_members(app)
             tendon_members = self._filter_tendon_members(all_members)
             if not tendon_members:
@@ -160,7 +160,9 @@ class Rfem6ApiAdapter:
 
         return {
             "estado": "modelo_leido",
-            "modelo": model_path,
+            "modelo": resolved_model["path"],
+            "modelo_nombre": resolved_model["name"],
+            "origen_modelo": resolved_model["source"],
             "api_key_name": self.api_key_name,
             "puerto": self.port,
             "miembros_tendon": member_numbers,
@@ -214,7 +216,7 @@ class Rfem6ApiAdapter:
 
     def aplicar_deformaciones_axiales(
         self,
-        model_path: str,
+        model_path: str | None,
         tendon_member_nos: list[int],
         payloads: list[RfemLoadCasePayload],
         strain_unit: str = "percent",
@@ -235,7 +237,7 @@ class Rfem6ApiAdapter:
         created_cases: list[dict[str, object]] = []
 
         with rfem.Application(**self._application_kwargs()) as app:
-            app.open_model(path=model_path)
+            resolved_model = self._resolve_model_context(app, model_path)
 
             load_case_class = getattr(rfem.loading, "LoadCase", None)
             member_load_class = getattr(rfem.loads, "MemberLoad", None)
@@ -290,7 +292,9 @@ class Rfem6ApiAdapter:
 
         return {
             "estado": "aplicado",
-            "modelo": model_path,
+            "modelo": resolved_model["path"],
+            "modelo_nombre": resolved_model["name"],
+            "origen_modelo": resolved_model["source"],
             "api_key_name": self.api_key_name,
             "puerto": self.port,
             "modo_creacion": "casos_tp_independientes",
@@ -302,6 +306,73 @@ class Rfem6ApiAdapter:
         if self.api_key_value:
             return {"api_key_value": self.api_key_value, "port": self.port}
         return {"api_key_name": self.api_key_name, "port": self.port}
+
+    def _resolve_model_context(self, app: Any, model_path: str | None) -> dict[str, str]:
+        active_model = self._read_active_model_context(app)
+        if active_model is not None:
+            return active_model
+
+        normalized_path = (model_path or "").strip()
+        if not normalized_path:
+            raise RuntimeError(
+                "RFEM no tiene un modelo activo. Selecciona un archivo .rf6 y la aplicaci?n lo abrir? en RFEM autom?ticamente."
+            )
+
+        app.open_model(path=normalized_path)
+        opened_model = self._read_active_model_context(app)
+        if opened_model is not None:
+            return opened_model
+
+        return {
+            "path": normalized_path,
+            "name": re.split(r"[\/]", normalized_path)[-1],
+            "source": "abierto_desde_archivo",
+        }
+
+    def _read_active_model_context(self, app: Any) -> dict[str, str] | None:
+        try:
+            active_model = app.get_active_model()
+        except Exception:
+            active_model = None
+
+        active_model_data = self._to_jsonable(active_model)
+        if not self._has_active_model_id(active_model_data):
+            return None
+
+        try:
+            parameters = app.get_model_main_parameters()
+        except Exception:
+            return {"path": "", "name": "Modelo activo de RFEM", "source": "modelo_activo"}
+
+        parameters_data = self._to_jsonable(parameters)
+        file_path = (
+            parameters_data.get("file_path")
+            or parameters_data.get("file_name")
+            or parameters_data.get("filepath")
+            or ""
+        )
+        name = (
+            parameters_data.get("name")
+            or parameters_data.get("model_name")
+            or (re.split(r"[\/]", file_path)[-1] if file_path else "Modelo activo de RFEM")
+        )
+        return {"path": file_path, "name": name, "source": "modelo_activo"}
+
+    @staticmethod
+    def _has_active_model_id(model_data: Any) -> bool:
+        if model_data is None:
+            return False
+        if isinstance(model_data, dict):
+            for key in ("guid", "id", "name", "file_path", "file_name", "no"):
+                value = model_data.get(key)
+                if isinstance(value, str) and value.strip():
+                    return True
+                if isinstance(value, (int, float)) and value != 0:
+                    return True
+            return False
+        if isinstance(model_data, str):
+            return bool(model_data.strip())
+        return True
 
     def _build_load_case(self, no: int, state_name: str) -> Any:
         load_case_class = getattr(rfem.loading, "LoadCase", None)

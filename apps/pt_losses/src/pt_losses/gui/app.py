@@ -118,7 +118,6 @@ class PtLossesApp:
         self.api_visibility_var = tk.BooleanVar(value=False)
         self.rfem_port_var = tk.StringVar(value="9000")
         self.rfem_unit_var = tk.StringVar(value="adimensional")
-        self.rfem_scale_var = tk.StringVar(value="1.0")
         self.rfem_status_var = tk.StringVar(value="RFEM aún no conectado desde la interfaz.")
         self.logo_image: tk.PhotoImage | None = None
 
@@ -265,7 +264,7 @@ class PtLossesApp:
         title_wrap = ttk.Frame(header, style="Panel.TFrame")
         title_wrap.grid(row=0, column=0, sticky="w")
 
-        ttk.Label(title_wrap, text="Cálculo de pérdidas de postensado", style="Headline.TLabel").pack(anchor="w")
+        ttk.Label(title_wrap, text="Cálculo de pérdidas de postensado en barras y superficies", style="Headline.TLabel").pack(anchor="w")
         ttk.Label(
             title_wrap,
             text="dlubal.com.ar | Herramienta visual para T = 0, T = infinito y envío directo a RFEM 6.",
@@ -414,9 +413,8 @@ class PtLossesApp:
         self._add_rfem_row(card, 3, "Cantidad de members", self.rfem_member_count_var)
         self._add_rfem_row(card, 4, "Cantidad de cordones", self.rfem_cordones_count_var)
         self._add_rfem_row(card, 5, "Puerto", self.rfem_port_var)
-        self._add_rfem_row(card, 6, "Factor escala", self.rfem_scale_var)
 
-        ttk.Label(card, text="Unidad RFEM", style="Field.TLabel").grid(row=7, column=0, sticky="w", pady=7, padx=(0, 12))
+        ttk.Label(card, text="Unidad RFEM", style="Field.TLabel").grid(row=6, column=0, sticky="w", pady=7, padx=(0, 12))
         unit_combo = ttk.Combobox(
             card,
             textvariable=self.rfem_unit_var,
@@ -424,10 +422,10 @@ class PtLossesApp:
             state="readonly",
             width=20,
         )
-        unit_combo.grid(row=7, column=1, sticky="ew", pady=7)
+        unit_combo.grid(row=6, column=1, sticky="ew", pady=7)
 
         hints = ttk.Frame(card, style="Card.TFrame")
-        hints.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(10, 10))
+        hints.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(10, 10))
         hints.columnconfigure(0, weight=1)
         ttk.Label(
             hints,
@@ -437,7 +435,7 @@ class PtLossesApp:
         ).grid(row=0, column=0, sticky="w")
 
         buttons = ttk.Frame(card, style="Card.TFrame")
-        buttons.grid(row=11, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        buttons.grid(row=10, column=0, columnspan=3, sticky="ew", pady=(10, 0))
         buttons.columnconfigure((0, 1), weight=1)
         buttons.columnconfigure((2, 3), weight=1)
 
@@ -455,7 +453,7 @@ class PtLossesApp:
         )
 
         ttk.Label(card, textvariable=self.rfem_status_var, style="CardBody.TLabel", wraplength=500).grid(
-            row=12, column=0, columnspan=3, sticky="w", pady=(14, 0)
+            row=11, column=0, columnspan=3, sticky="w", pady=(14, 0)
         )
 
     def _add_rfem_row(
@@ -501,7 +499,13 @@ class PtLossesApp:
         self.hero_frame.rowconfigure((0, 1), weight=1)
 
         self.cards: dict[str, ttk.Label] = {}
-        for index, title in enumerate(["Tensión inicial", "Tensión final", "T0 para RFEM", "Tinf para RFEM"]):
+        card_titles = [
+            ("sigma_0", "Estado inicial de tesado"),
+            ("sigma_inf", "Estado final con pérdidas"),
+            ("t0", "Deformación equivalente en T = 0"),
+            ("tinf", "Deformación equivalente en T = infinito"),
+        ]
+        for index, (card_key, title) in enumerate(card_titles):
             card = ttk.Frame(self.hero_frame, style="Card.TFrame", padding=12)
             row = index // 2
             column = index % 2
@@ -509,7 +513,7 @@ class PtLossesApp:
             ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor="w")
             value_label = ttk.Label(card, text="-", style="Value.TLabel")
             value_label.pack(anchor="w", pady=(6, 0))
-            self.cards[title] = value_label
+            self.cards[card_key] = value_label
 
         self.tables_frame = ttk.Frame(self.right_panel, style="PanelInner.TFrame")
         self.tables_frame.pack(fill="both", expand=True, pady=(10, 0))
@@ -565,10 +569,10 @@ class PtLossesApp:
         return text
 
     def _render_welcome_state(self) -> None:
-        self.cards["Tensión inicial"].configure(text="-")
-        self.cards["Tensión final"].configure(text="-")
-        self.cards["T0 para RFEM"].configure(text="-")
-        self.cards["Tinf para RFEM"].configure(text="-")
+        self.cards["sigma_0"].configure(text="-")
+        self.cards["sigma_inf"].configure(text="-")
+        self.cards["t0"].configure(text="-")
+        self.cards["tinf"].configure(text="-")
         self._write_text(self.summary_text, "Carga un archivo o edita los datos y pulsa 'Calcular' para ver el resumen del caso.")
         self._write_text(
             self.losses_text,
@@ -596,7 +600,6 @@ class PtLossesApp:
         self.rfem_model_var.set("")
         self.rfem_model_name_var.set("Ningún modelo seleccionado.")
         self.rfem_unit_var.set("adimensional")
-        self.rfem_scale_var.set("1.0")
         self.rfem_status_var.set("Nuevo cálculo iniciado. Selecciona un modelo o carga un archivo para continuar.")
         self.output_path_var.set("Listo para un nuevo cálculo.")
         self._render_welcome_state()
@@ -606,7 +609,6 @@ class PtLossesApp:
             self.rfem_model_var.set(r"D:\01 Juan Bejar\xx Proyectos RFEM\Ejemplos\Postensado\260312-postensado-conectividad-py.rf6")
         self.rfem_model_name_var.set(Path(self.rfem_model_var.get().strip()).name)
         self.rfem_unit_var.set("adimensional")
-        self.rfem_scale_var.set("1.0")
         self.rfem_status_var.set("Parámetros RFEM autocompletados. Configura la API desde Opciones y luego pulsa 'Leer modelo RFEM'.")
 
     def browse_rfem_model(self) -> bool:
@@ -617,18 +619,14 @@ class PtLossesApp:
         if selected_file:
             self.rfem_model_var.set(selected_file)
             self.rfem_model_name_var.set(Path(selected_file).name)
-            self.rfem_status_var.set("Modelo RFEM seleccionado desde la interfaz. Ahora puedes leer el modelo automáticamente.")
+            self.rfem_status_var.set("Modelo RFEM seleccionado. La aplicación lo abrirá en RFEM y leerá sus datos.")
             return True
         return False
-
     def select_and_load_rfem_model(self) -> None:
-        if self.browse_rfem_model():
-            selected_name = self.rfem_model_name_var.get().strip() or "modelo seleccionado"
-            self.rfem_model_name_var.set(f"Cargando {selected_name}...")
-            self.rfem_status_var.set("Leyendo modelo RFEM 6. Espera un momento...")
-            self.root.update_idletasks()
-            self.load_rfem_model_data()
-
+        self.rfem_model_name_var.set("Buscando modelo activo en RFEM...")
+        self.rfem_status_var.set("Buscando un modelo abierto en RFEM...")
+        self.root.update_idletasks()
+        self.load_rfem_model_data(allow_browse_if_needed=True)
     def load_sample(self) -> None:
         sample_path = Path(__file__).resolve().parents[3] / "examples" / "sample_input.json"
         self._load_mapping_from_path(sample_path)
@@ -686,10 +684,10 @@ class PtLossesApp:
         perdidas = self.result_payload["perdidas"]
         rfem = self.result_payload["rfem"]
 
-        self.cards["Tensión inicial"].configure(text=f"{resumen['tension_inicial_MPa']:.2f} MPa")
-        self.cards["Tensión final"].configure(text=f"{resumen['tension_final_MPa']:.2f} MPa")
-        self.cards["T0 para RFEM"].configure(text=f"{rfem['T0_percent']:.4f} %")
-        self.cards["Tinf para RFEM"].configure(text=f"{rfem['Tinf_percent']:.4f} %")
+        self.cards["sigma_0"].configure(text=f"{resumen['tension_inicial_MPa']:.2f} MPa")
+        self.cards["sigma_inf"].configure(text=f"{resumen['tension_final_MPa']:.2f} MPa")
+        self.cards["t0"].configure(text=f"{rfem['T0_percent']:.4f} %")
+        self.cards["tinf"].configure(text=f"{rfem['Tinf_percent']:.4f} %")
 
         self._write_text(
             self.summary_text,
@@ -722,18 +720,37 @@ class PtLossesApp:
             self.rfem_status_var.set(f"Falló la conexión con RFEM: {error}")
             messagebox.showerror("Conexión RFEM", str(error))
 
-    def load_rfem_model_data(self) -> None:
+    def load_rfem_model_data(self, allow_browse_if_needed: bool = False) -> None:
+        adapter = self._build_rfem_adapter(require_members=False)
+        requested_model_path = self.rfem_model_var.get().strip() or None
+
         try:
-            adapter = self._build_rfem_adapter(require_members=False)
-            snapshot = adapter.leer_modelo_postensado(self.rfem_model_var.get().strip())
+            snapshot = adapter.leer_modelo_postensado(requested_model_path)
         except Exception as error:
-            self.rfem_status_var.set(f"No se pudo leer el modelo RFEM: {error}")
-            messagebox.showerror("Lectura de modelo RFEM", str(error))
+            error_message = str(error)
+            if allow_browse_if_needed and "RFEM no tiene un modelo activo" in error_message:
+                if self.browse_rfem_model():
+                    selected_name = self.rfem_model_name_var.get().strip() or "modelo seleccionado"
+                    self.rfem_model_name_var.set(f"Cargando {selected_name}...")
+                    self.rfem_status_var.set("Abriendo el modelo en RFEM 6 y leyendo sus datos...")
+                    self.root.update_idletasks()
+                    self.load_rfem_model_data(allow_browse_if_needed=False)
+                else:
+                    self.rfem_model_name_var.set("Ningún modelo seleccionado.")
+                    self.rfem_status_var.set("No hay un modelo activo en RFEM y no se seleccionó ningún archivo.")
+                return
+
+            self.rfem_status_var.set(f"No se pudo leer el modelo RFEM: {error_message}")
+            messagebox.showerror("Lectura de modelo RFEM", error_message)
             return
 
         self.rfem_model_snapshot = snapshot
-        model_path = self.rfem_model_var.get().strip()
-        self.rfem_model_name_var.set(Path(model_path).name if model_path else "Ningún modelo seleccionado.")
+        resolved_model_path = str(snapshot.get("modelo") or "")
+        self.rfem_model_var.set(resolved_model_path)
+        resolved_model_name = str(snapshot.get("modelo_nombre") or "").strip()
+        if not resolved_model_name:
+            resolved_model_name = Path(resolved_model_path).name if resolved_model_path else "Modelo activo de RFEM"
+        self.rfem_model_name_var.set(resolved_model_name)
         self.rfem_members_var.set(" ".join(str(no) for no in snapshot.get("miembros_tendon", [])))
         self.rfem_member_count_var.set(str(snapshot.get("cantidad_miembros_tendon", len(snapshot.get("miembros_tendon", [])))))
         self.rfem_cordones_count_var.set(str(snapshot.get("cantidad_cordones", snapshot.get("cantidad_miembros_tendon", len(snapshot.get("miembros_tendon", []))))))
@@ -745,12 +762,13 @@ class PtLossesApp:
                     self.variables[key].set(str(value))
 
         tendon_ids_text = " ".join(str(no) for no in snapshot.get("miembros_tendon", [])) or "-"
+        origen_modelo = snapshot.get("origen_modelo")
+        origen_texto = "desde el modelo activo de RFEM" if origen_modelo == "modelo_activo" else "abriendo el archivo seleccionado en RFEM"
         self.rfem_status_var.set(
-            f"Modelo leído. Se aplicará sobre los members tendón con IDs: {tendon_ids_text}. Cantidad de members tendón: {snapshot.get('cantidad_miembros_tendon', 0)}. Cordones detectados: {snapshot.get('cantidad_cordones', 0)}."
+            f"Modelo leído {origen_texto}. Se aplicará sobre los members tendón con IDs: {tendon_ids_text}. Cantidad de members tendón: {snapshot.get('cantidad_miembros_tendon', 0)}. Cordones detectados: {snapshot.get('cantidad_cordones', 0)}."
         )
         self._save_settings()
         self._write_text(self.rfem_text, self._build_rfem_text(None))
-
     def apply_to_rfem(self) -> None:
         if self.current_result is None:
             self.calculate()
@@ -760,18 +778,16 @@ class PtLossesApp:
         try:
             adapter = self._build_rfem_adapter(require_members=False)
             if not self.rfem_members_var.get().strip():
-                snapshot = adapter.leer_modelo_postensado(self.rfem_model_var.get().strip())
-                self.rfem_model_snapshot = snapshot
-                self.rfem_members_var.set(" ".join(str(no) for no in snapshot.get("miembros_tendon", [])))
-                self.rfem_member_count_var.set(str(snapshot.get("cantidad_miembros_tendon", len(snapshot.get("miembros_tendon", [])))))
-                self.rfem_cordones_count_var.set(str(snapshot.get("cantidad_cordones", snapshot.get("cantidad_miembros_tendon", len(snapshot.get("miembros_tendon", []))))))
+                self.load_rfem_model_data(allow_browse_if_needed=True)
+                if not self.rfem_members_var.get().strip():
+                    return
             payloads = build_rfem_load_payload(self.current_result)
             rfem_result = adapter.aplicar_deformaciones_axiales(
-                model_path=self.rfem_model_var.get().strip(),
+                model_path=self.rfem_model_var.get().strip() or None,
                 tendon_member_nos=self._parse_member_numbers(self.rfem_members_var.get()),
                 payloads=payloads,
                 strain_unit=self.rfem_unit_var.get().strip(),
-                strain_scale=float(self.rfem_scale_var.get().strip()),
+                strain_scale=1.0,
             )
         except Exception as error:
             self.rfem_status_var.set(f"No se pudo aplicar en RFEM: {error}")
@@ -786,7 +802,6 @@ class PtLossesApp:
         self.rfem_status_var.set(f"Aplicación exitosa en RFEM. Se generaron {len(casos)} estados sobre los tendones detectados.")
         self._save_settings()
         messagebox.showinfo("RFEM", "Los estados de postensado se aplicaron correctamente en RFEM.")
-
     def save_output(self) -> None:
         if self.result_payload is None:
             messagebox.showinfo("Sin resultados", "Primero debes ejecutar un cálculo.")
@@ -848,11 +863,20 @@ class PtLossesApp:
             self.output_path_var.set(f"CSV exportado en: {selected_file}")
         except Exception as error:
             messagebox.showerror("No se pudo exportar", str(error))
+    def _mapping_from_form(self) -> dict[str, float]:
+        mapping: dict[str, float] = {}
+        for key, variable in self.variables.items():
+            raw_value = variable.get().strip()
+            if raw_value == "":
+                raise ValueError(f"El campo {key} no puede estar vacio.")
+            if key == "n_tendons":
+                mapping[key] = int(float(raw_value))
+            else:
+                mapping[key] = float(raw_value)
+        return mapping
+
 
     def _build_rfem_adapter(self, require_members: bool = True) -> Rfem6ApiAdapter:
-        model_path = self.rfem_model_var.get().strip()
-        if not model_path:
-            raise ValueError("Debes indicar el modelo RFEM desde la interfaz.")
         if require_members:
             self._parse_member_numbers(self.rfem_members_var.get())
         raw_api_key = self.rfem_api_key_var.get().strip()
@@ -864,7 +888,6 @@ class PtLossesApp:
             api_key_value=(raw_api_key if is_direct_key else None),
             port=int(self.rfem_port_var.get().strip()),
         )
-
     def _build_losses_text(self, pérdidas: dict[str, float]) -> str:
         lines = ["Desglose para presentación", ""]
         for key, description in LOSS_DESCRIPTIONS:
@@ -876,56 +899,78 @@ class PtLossesApp:
         if self.result_payload is None:
             return "No hay resultados disponibles para RFEM."
 
+        def has_value(value: object) -> bool:
+            if value is None:
+                return False
+            if isinstance(value, str):
+                cleaned = value.strip()
+                return cleaned not in {"", "-", "[]"}
+            return True
+
+        def append_if_value(lines: list[str], label: str, value: object, suffix: str = "") -> None:
+            if has_value(value):
+                lines.append(f"{label:<24} {value}{suffix}")
+
         rfem = self.result_payload["rfem"]
         lines = [
             "Estados equivalentes para RFEM 6",
             "",
-            f"T0 percent        = {rfem['T0_percent']:.6f} %",
-            f"Tinf percent      = {rfem['Tinf_percent']:.6f} %",
-            f"T0 por mil        = {rfem['T0_por_mil']:.6f} por mil",
-            f"Tinf por mil      = {rfem['Tinf_por_mil']:.6f} por mil",
-            f"epsilon_T0        = {rfem['T0_percent'] / 100.0:.8f}",
-            f"epsilon_Tinf      = {rfem['Tinf_percent'] / 100.0:.8f}",
+            f"T0 percent               {rfem['T0_percent']:.6f} %",
+            f"Tinf percent             {rfem['Tinf_percent']:.6f} %",
+            f"T0 por mil               {rfem['T0_por_mil']:.6f} por mil",
+            f"Tinf por mil             {rfem['Tinf_por_mil']:.6f} por mil",
+            f"epsilon_T0               {rfem['T0_percent'] / 100.0:.8f}",
+            f"epsilon_Tinf             {rfem['Tinf_percent'] / 100.0:.8f}",
             "",
-            f"Unidad activa GUI = {self.rfem_unit_var.get()}",
-            f"Factor de escala  = {self.rfem_scale_var.get()}",
-            f"Members tendón (IDs) = {self.rfem_members_var.get().strip() or '-'}",
-            f"Cantidad members = {self.rfem_member_count_var.get().strip() or '-'}",
-            f"Cantidad cordones = {self.rfem_cordones_count_var.get().strip() or '-'}",
+            f"Unidad activa GUI        {self.rfem_unit_var.get()}",
+            f"Members tendón (IDs)     {self.rfem_members_var.get().strip() or '-'}",
+            f"Cantidad members         {self.rfem_member_count_var.get().strip() or '-'}",
+            f"Cantidad cordones        {self.rfem_cordones_count_var.get().strip() or '-'}",
         ]
 
         if self.rfem_model_snapshot is not None:
             material = self.rfem_model_snapshot.get("material_tendon", {})
-            sección = self.rfem_model_snapshot.get("sección_tendon", {})
+            seccion = self.rfem_model_snapshot.get("seccion_tendon", {})
+            hormigon = self.rfem_model_snapshot.get("material_hormigon", {})
+            missing_model_data: list[str] = []
             lines.extend([
                 "",
                 "Lectura automática del modelo",
-                f"Cantidad de members tendón = {self.rfem_model_snapshot.get('cantidad_miembros_tendon', '-')}",
-                f"Cantidad cordones = {self.rfem_model_snapshot.get('cantidad_cordones', '-')}",
-                f"Longitud media    = {self.rfem_model_snapshot.get('longitud_promedio_m', '-')}",
-                f"Modelo soportado  = {self.rfem_model_snapshot.get('tipo_modelado_tendon', '-')}",
-                f"Sup. candidatas   = {self.rfem_model_snapshot.get('superficies_tendon_candidatas', [])}",
-                f"Material tendón   = {material.get('nombre', '-') if isinstance(material, dict) else '-'}",
-                f"Ep del modelo     = {material.get('Ep_MPa', '-') if isinstance(material, dict) else '-'} MPa",
-                f"fpk del modelo    = {material.get('fpk_MPa', '-') if isinstance(material, dict) else '-'} MPa",
-                f"fp01k del modelo  = {material.get('fp01k_MPa', '-') if isinstance(material, dict) else '-'} MPa",
-                f"Sección tendón    = {sección.get('nombre', '-') if isinstance(sección, dict) else '-'}",
-                f"Ap del modelo     = {sección.get('Ap_mm2', '-') if isinstance(sección, dict) else '-'} mm2",
-                f"mu_fric modelo    = {sección.get('mu_fric', '-') if isinstance(sección, dict) else '-'}",
-                f"k_wobble modelo   = {sección.get('k_wobble', '-') if isinstance(sección, dict) else '-'}",
-                f"Hormigón modelo   = {self.rfem_model_snapshot.get('material_hormigon', {}).get('nombre', '-') if isinstance(self.rfem_model_snapshot.get('material_hormigon', {}), dict) else '-'}",
-                f"Ec del modelo     = {self.rfem_model_snapshot.get('material_hormigon', {}).get('Ec_MPa', '-') if isinstance(self.rfem_model_snapshot.get('material_hormigon', {}), dict) else '-'} MPa",
-                f"fc del modelo     = {self.rfem_model_snapshot.get('material_hormigon', {}).get('fc_MPa', '-') if isinstance(self.rfem_model_snapshot.get('material_hormigon', {}), dict) else '-'} MPa",
-                "Nota superficies  = No soportadas aún para aplicación automática",
             ])
+            append_if_value(lines, "Cantidad members tendón", self.rfem_model_snapshot.get("cantidad_miembros_tendon"))
+            append_if_value(lines, "Cantidad cordones", self.rfem_model_snapshot.get("cantidad_cordones"))
+            append_if_value(lines, "Longitud media", self.rfem_model_snapshot.get("longitud_promedio_m"), " m")
+            append_if_value(lines, "Modelo soportado", self.rfem_model_snapshot.get("tipo_modelado_tendon"))
+            append_if_value(lines, "Material tendón", material.get("nombre") if isinstance(material, dict) else None)
+            append_if_value(lines, "Ep del modelo", material.get("Ep_MPa") if isinstance(material, dict) else None, " MPa")
+            append_if_value(lines, "fpk del modelo", material.get("fpk_MPa") if isinstance(material, dict) else None, " MPa")
+            append_if_value(lines, "fp01k del modelo", material.get("fp01k_MPa") if isinstance(material, dict) else None, " MPa")
+            append_if_value(lines, "Sección tendón", seccion.get("nombre") if isinstance(seccion, dict) else None)
+            ap_value = seccion.get("Ap_mm2") if isinstance(seccion, dict) else None
+            mu_fric_value = seccion.get("mu_fric") if isinstance(seccion, dict) else None
+            k_wobble_value = seccion.get("k_wobble") if isinstance(seccion, dict) else None
+            append_if_value(lines, "Ap del modelo", ap_value, " mm2")
+            append_if_value(lines, "mu_fric modelo", mu_fric_value)
+            append_if_value(lines, "k_wobble modelo", k_wobble_value)
+            append_if_value(lines, "Hormigón modelo", hormigon.get("nombre") if isinstance(hormigon, dict) else None)
+            append_if_value(lines, "Ec del modelo", hormigon.get("Ec_MPa") if isinstance(hormigon, dict) else None, " MPa")
+            append_if_value(lines, "fc del modelo", hormigon.get("fc_MPa") if isinstance(hormigon, dict) else None, " MPa")
+            if not has_value(ap_value):
+                missing_model_data.append("Ap")
+            if not has_value(mu_fric_value):
+                missing_model_data.append("mu_fric")
+            if not has_value(k_wobble_value):
+                missing_model_data.append("k_wobble")
+            if missing_model_data:
+                lines.append(f"Datos no leídos         {', ' .join(missing_model_data)}")
 
         if rfem_result is not None:
             lines.extend([
                 "",
                 "Estado del envío a RFEM",
-                f"Modo             = {rfem_result.get('modo_creacion', 'sin dato')}",
-                f"Modelo           = {rfem_result.get('modelo', 'sin dato')}",
-                f"Puerto           = {rfem_result.get('puerto', 'sin dato')}",
+                f"Modo                     {rfem_result.get('modo_creacion', 'sin dato')}",
+                f"Modelo                   {rfem_result.get('modelo', 'sin dato')}",
+                f"Puerto                   {rfem_result.get('puerto', 'sin dato')}",
             ])
             casos = rfem_result.get("casos", [])
             if isinstance(casos, list):
@@ -933,16 +978,6 @@ class PtLossesApp:
                     lines.append(f"Caso {caso.get('caso_carga_no')} -> {caso.get('estado_temporal')} -> e = {caso.get('deformacion_axial')}")
 
         return "\n".join(lines)
-
-    def _mapping_from_form(self) -> dict[str, float]:
-        mapping: dict[str, float] = {}
-        integer_fields = {"n_tendons"}
-        for key, _label in FIELD_LABELS:
-            raw_value = self.variables[key].get().strip()
-            if raw_value == "":
-                raise ValueError(f"El campo '{key}' no puede estar vacío.")
-            mapping[key] = int(float(raw_value)) if key in integer_fields else float(raw_value)
-        return mapping
 
     @staticmethod
     def _parse_member_numbers(raw_value: str) -> list[int]:
@@ -1068,8 +1103,56 @@ class PtLossesApp:
 
 def run() -> None:
     root = tk.Tk()
-    PtLossesApp(root)
+    root.withdraw()
+
+    splash: tk.Toplevel | None = None
+    splash_image: tk.PhotoImage | None = None
+
+    try:
+        splash_path = _find_splash_path()
+        if splash_path is not None:
+            splash = tk.Toplevel(root)
+            splash.overrideredirect(True)
+            splash.configure(bg=COLORS["bg"])
+            splash.attributes("-topmost", True)
+
+            splash_image = tk.PhotoImage(file=str(splash_path))
+            label = tk.Label(splash, image=splash_image, bd=0, highlightthickness=0)
+            label.pack()
+
+            splash.update_idletasks()
+            width = splash.winfo_width()
+            height = splash.winfo_height()
+            x = max(0, (splash.winfo_screenwidth() - width) // 2)
+            y = max(0, (splash.winfo_screenheight() - height) // 2)
+            splash.geometry(f"{width}x{height}+{x}+{y}")
+            splash.update()
+
+        PtLossesApp(root)
+    finally:
+        if splash is not None and splash.winfo_exists():
+            splash.destroy()
+        root.deiconify()
+
     root.mainloop()
+
+
+def _find_splash_path() -> Path | None:
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    candidates = [
+        base / "splash-screen.png",
+        base / "assets" / "splash-screen.png",
+        base / "pt_losses" / "gui" / "assets" / "splash-screen.png",
+        Path(__file__).resolve().parent / "assets" / "splash-screen.png",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+
+
 
 
 
