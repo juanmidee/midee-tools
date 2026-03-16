@@ -1,0 +1,9 @@
+build/
+dist/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+examples/*.rf6
+examples/*.rf6bak

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual de Uso - PérdidaPostensadoRFEM6</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 36px auto;
+      max-width: 1000px;
+      line-height: 1.6;
+      color: #1f2d3d;
+      background: #ffffff;
+    }
+    h1, h2, h3 {
+      color: #16325c;
+    }
+    h1 {
+      border-bottom: 3px solid #16325c;
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #d4dde8;
+      padding-bottom: 6px;
+    }
+    .box {
+      background: #f3f6fa;
+      border: 1px solid #d6dfeb;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th, td {
+      border: 1px solid #d6dfeb;
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #eaf0f7;
+    }
+    code {
+      background: #eef3f8;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    ul, ol {
+      padding-left: 22px;
+    }
+    .small {
+      color: #526273;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Manual de Uso</h1>
+  <p><strong>Aplicación:</strong> PérdidaPostensadoRFEM6</p>
+  <p><strong>Propósito:</strong> calcular pérdidas de postensado y convertir los resultados en deformaciones axiales equivalentes para su aplicación en RFEM 6.</p>
+
+  <div class="box">
+    <strong>Deslinde de responsabilidades</strong><br>
+    Los valores obtenidos con esta herramienta deben ser revisados, verificados y validados por un ingeniero estructural competente antes de su uso en proyecto, documentación, cálculo ejecutivo o construcción. La aplicación no reemplaza el criterio profesional ni la verificación normativa correspondiente.
+  </div>
+
+  <h2>1. Introducción</h2>
+  <p>
+    PérdidaPostensadoRFEM6 es una herramienta para asistir en el cálculo de pérdidas de postensado de tendones y en la obtención de las deformaciones axiales equivalentes que luego pueden aplicarse en RFEM 6.
+  </p>
+  <p>La aplicación permite dos modos de trabajo:</p>
+  <ul>
+    <li>Modo manual, ingresando los datos del caso directamente en la pestaña <strong>Cálculo</strong>.</li>
+    <li>Modo integrado con RFEM 6, leyendo automáticamente el modelo, los tendones y los materiales desde la API de Dlubal.</li>
+  </ul>
+
+  <h2>2. Resultados que entrega la herramienta</h2>
+  <ul>
+    <li>Tensión máxima utilizable del acero.</li>
+    <li>Tensión inicial de tesado.</li>
+    <li>Tensión final a tiempo infinito.</li>
+    <li>Fuerza inicial y final por tendón y total.</li>
+    <li>Desglose de pérdidas inmediatas y diferidas.</li>
+    <li>Valores equivalentes para RFEM 6 en <strong>T = 0</strong> y <strong>T = infinito</strong>.</li>
+  </ul>
+
+  <h2>3. Requisitos de uso</h2>
+  <h3>3.1 Requisitos generales</h3>
+  <ul>
+    <li>Sistema operativo Windows.</li>
+    <li>Python 3.11+ para ejecutar la versión sin compilar o el ejecutable <code>PerdidaPostensadoRFEM6.exe</code>.</li>
+    <li>Permisos para leer modelos, archivos JSON/YAML y exportar resultados.</li>
+  </ul>
+
+  <h3>3.2 Requisitos para integración con RFEM 6</h3>
+  <ul>
+    <li>RFEM 6 instalado y abierto.</li>
+    <li>Servicio gRPC/API habilitado en RFEM.</li>
+    <li>API key válida de Dlubal.</li>
+    <li>Modelo <code>.rf6</code> accesible desde la PC.</li>
+  </ul>
+
+  <div class="box">
+    <strong>Seguridad de la API key en la distribución</strong><br>
+    El ejecutable distribuido <strong>no debe incluir ninguna API key embebida</strong>. La aplicación queda vacía al distribuirse y la API key se configura por primera vez desde <strong>Opciones &gt; Configurar API RFEM...</strong>. Una vez cargada, queda guardada localmente en la computadora de uso hasta que se la cambie nuevamente.
+  </div>
+
+  <h2>4. Menús de la aplicación</h2>
+  <h3>4.1 Archivo</h3>
+  <ul>
+    <li><strong>Nuevo cálculo:</strong> limpia la sesión actual y deja la interfaz lista para un nuevo caso.</li>
+    <li><strong>Salir:</strong> cierra la aplicación.</li>
+  </ul>
+
+  <h3>4.2 Opciones</h3>
+  <ul>
+    <li><strong>Configurar API RFEM...</strong> permite pegar o actualizar la API key. El valor queda guardado localmente hasta que se cambie.</li>
+    <li><strong>Autocompletar RFEM:</strong> completa valores base prácticos para el flujo de integración.</li>
+  </ul>
+
+  <h3>4.3 Ayuda</h3>
+  <ul>
+    <li><strong>Ayuda:</strong> abre este manual HTML en el navegador predeterminado.</li>
+    <li><strong>Acerca de:</strong> muestra información general y el deslinde de responsabilidades.</li>
+    <li><strong>F1:</strong> acceso rápido para abrir este mismo manual.</li>
+  </ul>
+
+  <h2>5. Estructura de la interfaz</h2>
+  <h3>5.1 Panel izquierdo</h3>
+  <p>Contiene el control principal del programa mediante dos pestañas:</p>
+  <ul>
+    <li><strong>Cálculo:</strong> datos de entrada, carga de ejemplo y ejecución del cálculo.</li>
+    <li><strong>RFEM 6:</strong> selección del modelo, lectura del modelo, autocompletado y aplicación en RFEM.</li>
+  </ul>
+
+  <h3>5.2 Panel derecho</h3>
+  <p>Muestra los resultados del caso calculado:</p>
+  <ul>
+    <li>Tarjetas de datos técnicos.</li>
+    <li>Resumen ejecutivo.</li>
+    <li>Desglose de pérdidas expresado en porcentaje para presentación.</li>
+    <li>Lectura para RFEM 6, con scroll vertical cuando el texto supera el alto disponible.</li>
+  </ul>
+
+  <h2>6. Flujo recomendado de uso</h2>
+  <ol>
+    <li>Abra la aplicación.</li>
+    <li>Si usará RFEM, abra RFEM 6 y cargue el modelo correspondiente.</li>
+    <li>Vaya a <strong>Opciones &gt; Configurar API RFEM...</strong> y pegue la API key si aún no está guardada.</li>
+    <li>En la pestaña <strong>RFEM 6</strong>, seleccione el modelo <code>.rf6</code>.</li>
+    <li>Pulse <strong>Leer modelo RFEM</strong> para detectar los tendones y leer propiedades del material.</li>
+    <li>Revise o complete los campos necesarios en la pestaña <strong>Cálculo</strong>.</li>
+    <li>Pulse <strong>Calcular</strong>.</li>
+    <li>Revise las tensiones, fuerzas, pérdidas y la lectura de RFEM 6.</li>
+    <li>Si el resultado es correcto, pulse <strong>Aplicar en RFEM</strong>.</li>
+    <li>Si desea un archivo externo, utilice <strong>Exportar CSV</strong>.</li>
+  </ol>
+
+  <h2>7. Uso de la pestaña Cálculo</h2>
+  <p>En esta pestaña pueden ingresarse o corregirse los parámetros del caso:</p>
+  <ul>
+    <li>Propiedades del acero de postensado: <code>Ep</code>, <code>fpk</code>, <code>fp01k</code>, <code>Ap</code>.</li>
+    <li>Propiedades del hormigón: <code>Ec</code>, <code>fc</code>.</li>
+    <li>Datos geométricos y de tesado.</li>
+    <li>Pérdidas por rozamiento, anclaje, acortamiento elástico, fluencia, retracción y relajación.</li>
+  </ul>
+  <p>Botones principales:</p>
+  <ul>
+    <li><strong>Calcular:</strong> ejecuta el cálculo con los datos actuales.</li>
+    <li><strong>Restablecer:</strong> vuelve a los valores base del programa.</li>
+    <li><strong>Cargar archivo:</strong> permite abrir un archivo JSON o YAML de entrada.</li>
+    <li><strong>Cargar ejemplo:</strong> carga el ejemplo provisto con la aplicación.</li>
+  </ul>
+
+  <h2>8. Uso de la pestaña RFEM 6</h2>
+  <p>Esta pestaña está orientada al flujo automático con RFEM.</p>
+  <table>
+    <tr>
+      <th>Campo</th>
+      <th>Descripción</th>
+    </tr>
+    <tr>
+      <td>Modelo RFEM</td>
+      <td>Ruta del archivo <code>.rf6</code>. Este campo no se recuerda entre sesiones.</td>
+    </tr>
+    <tr>
+      <td>IDs de members tendón</td>
+      <td>IDs detectados de los members tipo tendón sobre los cuales se aplicará la deformación axial.</td>
+    </tr>
+    <tr>
+      <td>Cantidad de members</td>
+      <td>Cantidad de members tendón detectados.</td>
+    </tr>
+    <tr>
+      <td>Cantidad de cordones</td>
+      <td>Cantidad de cordones inferida a partir del modelo/sección/material del tendón.</td>
+    </tr>
+    <tr>
+      <td>Puerto</td>
+      <td>Puerto del servicio gRPC de RFEM, normalmente <code>9000</code>.</td>
+    </tr>
+    <tr>
+      <td>Numeraci?n autom?tica en RFEM</td>
+      <td>Números base utilizados para crear los casos de carga y las cargas de miembro en RFEM.</td>
+    </tr>
+    <tr>
+      <td>Factor escala / Unidad RFEM</td>
+      <td>Controlan el valor final que se enviará a RFEM como deformación axial equivalente.</td>
+    </tr>
+  </table>
+
+  <p>Botones principales:</p>
+  <ul>
+    <li><strong>Probar conexión:</strong> verifica la conexión con RFEM.</li>
+    <li><strong>Leer modelo RFEM:</strong> detecta members tendón y lee las propiedades relevantes del modelo.</li>
+    <li><strong>Autocompletar:</strong> carga parámetros convenientes para el flujo RFEM.</li>
+    <li><strong>Aplicar en RFEM:</strong> crea los estados de postensado y aplica las deformaciones axiales equivalentes.</li>
+  </ul>
+
+  <h2>9. Qué se lee automáticamente desde RFEM</h2>
+  <ul>
+    <li>Members tipo tendón.</li>
+    <li>Cantidad de members tendón.</li>
+    <li>Cantidad de cordones.</li>
+    <li>Longitud media del tendón.</li>
+    <li>Material del tendón y propiedades relevantes del acero.</li>
+    <li>Material principal de hormigón del modelo, cuando se puede identificar de forma consistente.</li>
+  </ul>
+  <p class="small">
+    Nota: actualmente la aplicación trabaja principalmente con tendones modelados como <strong>members</strong>. Las superficies candidatas se informan en la lectura del modelo, pero no se aplican automáticamente.
+  </p>
+
+  <h2>10. Integración API con RFEM 6</h2>
+  <p>
+    La integración con RFEM 6 de esta aplicación sigue el flujo general documentado por Dlubal para su API gRPC. A continuación se resumen los puntos más relevantes para el usuario final.
+  </p>
+
+  <h3>10.1 Autenticación con API key</h3>
+  <p>
+    Según la documentación oficial de autenticación de Dlubal, el acceso a la API se realiza mediante una <strong>API key</strong>. Dlubal indica que la clave puede pasarse directamente al inicializar el cliente o bien resolverse por nombre desde un archivo <code>config.ini</code>. La documentación también señala que el uso de un <code>api_key_name</code> es el método preferido cuando se comparten scripts, ya que ayuda a proteger el valor directo de la clave.
+  </p>
+  <p>
+    En esta aplicación, por motivos de comodidad para el usuario, la API key se configura desde el menú <strong>Opciones</strong> y se guarda localmente en la computadora de uso. Esto permite que, después de la primera configuración, no sea necesario volver a pegar la clave en cada ejecución.
+  </p>
+
+  <h3>10.2 Generación y resguardo de la API key</h3>
+  <p>
+    La documentación oficial indica que las API keys se administran desde <strong>Extranet &gt; API &amp; Cloud</strong>. También advierte que, una vez generada la clave, debe copiarse y almacenarse en forma segura de inmediato, ya que por motivos de seguridad no volverá a mostrarse completamente.
+  </p>
+
+  <h3>10.3 Puesta en marcha del servidor API</h3>
+  <p>
+    Dlubal documenta que el servidor gRPC se inicia por defecto junto con la interfaz gráfica de RFEM/RSTAB. También explica que el puerto puede revisarse y modificarse en <strong>Options &gt; Program Options &gt; API Service | gRPC</strong>. En la mayoría de los casos prácticos se utiliza el puerto <code>9000</code>.
+  </p>
+  <p>
+    Esto significa que, para trabajar normalmente con esta aplicación, basta con abrir RFEM 6 y verificar que el servicio API esté disponible en el puerto configurado.
+  </p>
+
+  <h3>10.4 Inicio rápido y cliente Python</h3>
+  <p>
+    La guía oficial de inicio rápido de Dlubal indica el uso de Python 3.10 o superior y la instalación del cliente oficial mediante <code>pip install dlubal.api</code>. También muestra un ejemplo básico de conexión usando:
+  </p>
+  <div class="box">
+    <code>from dlubal.api import rfem</code><br>
+    <code>with rfem.Application(api_key_name='key') as rfem_app:</code>
+  </div>
+  <p>
+    Esta aplicación encapsula ese flujo y evita que el usuario tenga que programar manualmente la conexión.
+  </p>
+
+  <h3>10.5 Fuentes oficiales consultadas</h3>
+  <ul>
+    <li><a href="https://www.dlubal.com/es/productos/api-de-dlubal/documentacion-de-la-api/index">Índice de documentación de la API de Dlubal</a></li>
+    <li><a href="https://apidocs.dlubal.com/access_control.html">Authentication - Dlubal API documentation</a></li>
+    <li><a href="https://apidocs.dlubal.com/starting_server.html">Starting Server - Dlubal API documentation</a></li>
+    <li><a href="https://apidocs.dlubal.com/quick_start.html">Quick Start - Dlubal API documentation</a></li>
+  </ul>
+
+  <h2>11. Presentación de pérdidas</h2>
+  <p>Internamente las pérdidas se manejan como coeficientes adimensionales. En la interfaz se muestran en porcentaje para facilitar la lectura en revisiones técnicas y presentaciones.</p>
+  <table>
+    <tr>
+      <th>Clave interna</th>
+      <th>Descripción visible</th>
+    </tr>
+    <tr><td><code>eta_fr</code></td><td>Rozamiento</td></tr>
+    <tr><td><code>eta_anc</code></td><td>Anclaje</td></tr>
+    <tr><td><code>eta_el</code></td><td>Acortamiento elástico</td></tr>
+    <tr><td><code>eta_rel</code></td><td>Relajación del acero</td></tr>
+    <tr><td><code>eta_flu</code></td><td>Fluencia del hormigón</td></tr>
+    <tr><td><code>eta_ret</code></td><td>Retracción del hormigón</td></tr>
+    <tr><td><code>eta_total</code></td><td>Pérdida total</td></tr>
+  </table>
+
+  <h2>12. Exportación de resultados</h2>
+  <p>El botón <strong>Exportar CSV</strong> genera un archivo con dos columnas:</p>
+  <ul>
+    <li><strong>campo</strong></li>
+    <li><strong>valor</strong></li>
+  </ul>
+  <p>El CSV incluye tensiones, fuerzas, pérdidas y valores equivalentes para RFEM.</p>
+
+  <h2>13. Mensajes y comportamientos importantes</h2>
+  <ul>
+    <li>La API key sí se guarda localmente hasta que se cambie.</li>
+    <li>El ejecutable distribuido no incorpora la API key del equipo donde fue compilado.</li>
+    <li>El modelo RFEM seleccionado no se recuerda al reiniciar la aplicación.</li>
+    <li>Si RFEM está cerrado, la app mostrará un error de conexión gRPC.</li>
+    <li>Si no hay resultados calculados, no se permitirá exportar ni aplicar en RFEM.</li>
+  </ul>
+
+  <h2>14. Solución de problemas</h2>
+  <table>
+    <tr>
+      <th>Problema</th>
+      <th>Acción recomendada</th>
+    </tr>
+    <tr>
+      <td>No conecta con RFEM</td>
+      <td>Verifique que RFEM esté abierto, que el servicio gRPC esté activo y que el puerto sea el correcto.</td>
+    </tr>
+    <tr>
+      <td>No encuentra tendones</td>
+      <td>Revise el tipo de member, el nombre y la definición del tendón dentro del modelo. La aplicación contempla variantes en español e inglés.</td>
+    </tr>
+    <tr>
+      <td>Los valores del material no coinciden</td>
+      <td>Use <strong>Leer modelo RFEM</strong> y verifique que el tendón tenga su sección y material correctamente definidos en RFEM.</td>
+    </tr>
+    <tr>
+      <td>Las deformaciones en RFEM parecen desproporcionadas</td>
+      <td>Revise la unidad RFEM y el factor de escala. La configuración recomendada actual de la interfaz es <code>adimensional</code>.</td>
+    </tr>
+  </table>
+
+  <h2>15. Fórmulas implementadas</h2>
+  <div class="box">
+    <code>sigma_max = min(0.80 · fpk, 0.94 · fp01k)</code><br>
+    <code>sigma_0 = mu_tesado · sigma_max</code><br>
+    <code>eta_fr = 1 - exp(-(mu_fric · theta_total + k_wobble · tendon_length))</code><br>
+    <code>eta_total = min(eta_fr + eta_anc + eta_el + eta_rel + eta_flu + eta_ret, 0.99)</code><br>
+    <code>sigma_inf = sigma_0 · (1 - eta_total)</code><br>
+    <code>T0_percent = -(sigma_0 / Ep) · 100</code><br>
+    <code>Tinf_percent = -(sigma_inf / Ep) · 100</code>
+  </div>
+
+  <h2>16. Cierre</h2>
+  <p>
+    Esta herramienta está pensada para acelerar el flujo de cálculo y transferencia de postensado hacia RFEM 6, manteniendo claridad técnica y una interfaz apta para revisión y presentación.
+  </p>
+
+</body>
+</html>

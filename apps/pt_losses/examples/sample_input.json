@@ -1,0 +1,20 @@
+{
+  "Ep": 195000.0,
+  "Ec": 34000.0,
+  "fpk": 1860.0,
+  "fp01k": 1640.0,
+  "fc": 45.0,
+  "Ap": 150.0,
+  "n_tendons": 12,
+  "tendon_length": 32.5,
+  "theta_total": 0.18,
+  "eccentricity": 0.22,
+  "mu_tesado": 0.75,
+  "mu_fric": 0.19,
+  "k_wobble": 0.0015,
+  "anchorage_slip_mm": 6.0,
+  "concrete_stress_at_tendon": 9.5,
+  "creep_coeff": 1.8,
+  "shrinkage_strain": 0.0002,
+  "relaxation_loss_ratio": 0.025
+}
