@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import csv
 import json
@@ -697,13 +697,15 @@ class PtLossesApp:
                 f"Tensión final      : {resumen['tension_final_MPa']:.2f} MPa",
                 f"Fuerza inicial/t   : {resumen['fuerza_inicial_por_tendon_kN']:.2f} kN",
                 f"Fuerza final/t     : {resumen['fuerza_final_por_tendon_kN']:.2f} kN",
+                f"Pérdida/t          : {resumen['fuerza_inicial_por_tendon_kN'] - resumen['fuerza_final_por_tendon_kN']:.2f} kN",
                 f"Fuerza inicial tot : {resumen['fuerza_inicial_total_kN']:.2f} kN",
                 f"Fuerza final tot   : {resumen['fuerza_final_total_kN']:.2f} kN",
+                f"Pérdida total      : {resumen['fuerza_inicial_total_kN'] - resumen['fuerza_final_total_kN']:.2f} kN",
             ]),
         )
         self._write_text(
             self.losses_text,
-            self._build_losses_text(perdidas),
+            self._build_losses_text(perdidas, resumen),
         )
         self._write_text(self.rfem_text, self._build_rfem_text(None))
         self.output_path_var.set("Cálculo actualizado correctamente.")
@@ -888,11 +890,19 @@ class PtLossesApp:
             api_key_value=(raw_api_key if is_direct_key else None),
             port=int(self.rfem_port_var.get().strip()),
         )
-    def _build_losses_text(self, pérdidas: dict[str, float]) -> str:
+    def _build_losses_text(self, pérdidas: dict[str, float], resumen: dict[str, float]) -> str:
+        fuerza_inicial_tendon = resumen["fuerza_inicial_por_tendon_kN"]
+        fuerza_inicial_total = resumen["fuerza_inicial_total_kN"]
         lines = ["Desglose para presentación", ""]
         for key, description in LOSS_DESCRIPTIONS:
-            value = pérdidas.get(key, 0.0) * 100.0
+            ratio = pérdidas.get(key, 0.0)
+            value = ratio * 100.0
+            perdida_tendon = fuerza_inicial_tendon * ratio
+            perdida_total = fuerza_inicial_total * ratio
             lines.append(f"{description:<24} {value:>7.2f} %")
+            lines.append(f"{'':<24} {perdida_tendon:>7.2f} kN/t")
+            lines.append(f"{'':<24} {perdida_total:>7.2f} kN total")
+            lines.append("")
         return "\n".join(lines)
 
     def _build_rfem_text(self, rfem_result: dict[str, object] | None) -> str:
@@ -962,7 +972,7 @@ class PtLossesApp:
             if not has_value(k_wobble_value):
                 missing_model_data.append("k_wobble")
             if missing_model_data:
-                lines.append(f"Datos no leídos         {', ' .join(missing_model_data)}")
+                lines.append(f"Datos no leídos         {', '.join(missing_model_data)}")
 
         if rfem_result is not None:
             lines.extend([
@@ -1101,33 +1111,13 @@ class PtLossesApp:
         ttk.Label(parent, text=fallback, style="Body.TLabel", wraplength=wrap, justify="right").pack(anchor="e")
 
 
-def run() -> None:
-    root = tk.Tk()
-    root.withdraw()
-
-    splash: tk.Toplevel | None = None
-    splash_image: tk.PhotoImage | None = None
+def run(root: tk.Tk | None = None, splash: tk.Toplevel | None = None) -> None:
+    own_root = root is None
+    if root is None:
+        root = tk.Tk()
+        root.withdraw()
 
     try:
-        splash_path = _find_splash_path()
-        if splash_path is not None:
-            splash = tk.Toplevel(root)
-            splash.overrideredirect(True)
-            splash.configure(bg=COLORS["bg"])
-            splash.attributes("-topmost", True)
-
-            splash_image = tk.PhotoImage(file=str(splash_path))
-            label = tk.Label(splash, image=splash_image, bd=0, highlightthickness=0)
-            label.pack()
-
-            splash.update_idletasks()
-            width = splash.winfo_width()
-            height = splash.winfo_height()
-            x = max(0, (splash.winfo_screenwidth() - width) // 2)
-            y = max(0, (splash.winfo_screenheight() - height) // 2)
-            splash.geometry(f"{width}x{height}+{x}+{y}")
-            splash.update()
-
         PtLossesApp(root)
     finally:
         if splash is not None and splash.winfo_exists():
@@ -1149,6 +1139,10 @@ def _find_splash_path() -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+
+
 
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manual de uso - P?rdidaPostensadoRFEM6</title>
+  <title>Manual de uso - PérdidaPostensadoRFEM6</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 36px auto; max-width: 1000px; line-height: 1.6; color: #1f2d3d; background: #ffffff; }
     h1, h2, h3 { color: #16325c; }
@@ -22,32 +22,32 @@
 </head>
 <body>
   <div class="hero">
-    <img src="splash-screen.png" alt="Pantalla inicial de P?rdidaPostensadoRFEM6">
+    <img src="splash-screen.png" alt="Pantalla inicial de PérdidaPostensadoRFEM6">
   </div>
   <h1>Manual de uso</h1>
-  <p><strong>Aplicaci?n:</strong> P?rdidaPostensadoRFEM6</p>
-  <p><strong>Prop?sito:</strong> calcular p?rdidas de postensado y convertir los resultados en deformaciones axiales equivalentes para su aplicaci?n en RFEM 6.</p>
+  <p><strong>Aplicación:</strong> PérdidaPostensadoRFEM6</p>
+  <p><strong>Propósito:</strong> calcular pérdidas de postensado y convertir los resultados en deformaciones axiales equivalentes para su aplicación en RFEM 6.</p>
 
   <div class="box">
     <strong>Deslinde de responsabilidades</strong><br>
-    Los valores obtenidos con esta herramienta deben ser revisados, verificados y validados por un ingeniero estructural competente antes de su uso en proyecto, documentaci?n, c?lculo ejecutivo o construcci?n. La aplicaci?n no reemplaza el criterio profesional ni la verificaci?n normativa correspondiente.
+    Los valores obtenidos con esta herramienta deben ser revisados, verificados y validados por un ingeniero estructural competente antes de su uso en proyecto, documentación, cálculo ejecutivo o construcción. La aplicación no reemplaza el criterio profesional ni la verificación normativa correspondiente.
   </div>
 
-  <h2>1. Introducci?n</h2>
-  <p>P?rdidaPostensadoRFEM6 es una herramienta para asistir en el c?lculo de p?rdidas de postensado de tendones y en la obtenci?n de deformaciones axiales equivalentes para RFEM 6.</p>
-  <p>La aplicaci?n permite dos modos de trabajo:</p>
+  <h2>1. Introducción</h2>
+  <p>PérdidaPostensadoRFEM6 es una herramienta para asistir en el cálculo de pérdidas de postensado de tendones y en la obtención de deformaciones axiales equivalentes para RFEM 6.</p>
+  <p>La aplicación permite dos modos de trabajo:</p>
   <ul>
-    <li>Modo manual, ingresando datos directamente en la pesta?a <strong>C?lculo</strong>.</li>
-    <li>Modo integrado con RFEM 6, leyendo autom?ticamente el modelo, los tendones y los materiales desde la API de Dlubal.</li>
+    <li>Modo manual, ingresando datos directamente en la pestaña <strong>Cálculo</strong>.</li>
+    <li>Modo integrado con RFEM 6, leyendo automáticamente el modelo, los tendones y los materiales desde la API de Dlubal.</li>
   </ul>
 
   <h2>2. Resultados que entrega la herramienta</h2>
   <ul>
-    <li>Tensi?n m?xima utilizable del acero.</li>
+    <li>Tensión máxima utilizable del acero.</li>
     <li>Estado inicial de tesado.</li>
-    <li>Estado final con p?rdidas.</li>
-    <li>Fuerza inicial y final por tend?n y total.</li>
-    <li>Desglose de p?rdidas inmediatas y diferidas.</li>
+    <li>Estado final con pérdidas.</li>
+    <li>Fuerza inicial y final por tendón y total.</li>
+    <li>Desglose de pérdidas inmediatas y diferidas.</li>
     <li>Valores equivalentes para RFEM 6 en <strong>T = 0</strong> y <strong>T = infinito</strong>.</li>
   </ul>
 
@@ -57,7 +57,7 @@
     <li>Python 3.11+ o el ejecutable <code>PerdidaPostensadoRFEM6.exe</code>.</li>
     <li>RFEM 6 instalado para el flujo integrado.</li>
     <li>Servicio gRPC/API habilitado en RFEM.</li>
-    <li>API key v?lida de Dlubal.</li>
+    <li>API key válida de Dlubal.</li>
   </ul>
 
   <div class="box">
@@ -65,91 +65,91 @@
     El ejecutable distribuido no debe incluir una API key embebida. La clave se configura por primera vez desde <strong>Opciones &gt; Configurar API RFEM...</strong> y luego queda guardada localmente en la computadora de uso hasta que se cambie nuevamente.
   </div>
 
-  <h2>4. Men?s de la aplicaci?n</h2>
+  <h2>4. Menús de la aplicación</h2>
   <h3>4.1 Archivo</h3>
   <ul>
-    <li><strong>Nuevo c?lculo:</strong> limpia la sesi?n actual y deja la interfaz lista para un nuevo caso.</li>
-    <li><strong>Salir:</strong> cierra la aplicaci?n.</li>
+    <li><strong>Nuevo cálculo:</strong> limpia la sesión actual y deja la interfaz lista para un nuevo caso.</li>
+    <li><strong>Salir:</strong> cierra la aplicación.</li>
   </ul>
   <h3>4.2 Opciones</h3>
   <ul>
     <li><strong>Configurar API RFEM...</strong>: permite pegar o actualizar la API key.</li>
-    <li><strong>Autocompletar RFEM:</strong> completa valores base pr?cticos para el flujo de integraci?n.</li>
+    <li><strong>Autocompletar RFEM:</strong> completa valores base prácticos para el flujo de integración.</li>
   </ul>
   <h3>4.3 Ayuda</h3>
   <ul>
     <li><strong>Ayuda:</strong> abre este manual HTML en el navegador.</li>
-    <li><strong>Acerca de:</strong> muestra informaci?n general y el deslinde de responsabilidades.</li>
-    <li><strong>F1:</strong> acceso r?pido para abrir este mismo manual.</li>
+    <li><strong>Acerca de:</strong> muestra información general y el deslinde de responsabilidades.</li>
+    <li><strong>F1:</strong> acceso rápido para abrir este mismo manual.</li>
   </ul>
 
-  <h2>5. Flujo l?gico con RFEM 6</h2>
+  <h2>5. Flujo lógico con RFEM 6</h2>
   <ol>
     <li>Abra RFEM 6.</li>
-    <li>En la pesta?a <strong>RFEM 6</strong> pulse <strong>LEER MODELO DE RFEM 6</strong>.</li>
-    <li>La aplicaci?n intenta primero leer el <strong>modelo activo</strong> de RFEM.</li>
-    <li>Si RFEM no tiene un modelo abierto, la aplicaci?n le pide al usuario seleccionar un archivo <code>.rf6</code>.</li>
-    <li>Una vez seleccionado, la aplicaci?n lo <strong>abre en RFEM</strong> desde el propio script y luego lee sus datos autom?ticamente.</li>
-    <li>La interfaz completa los IDs de members tend?n, cantidad de members, cantidad de cordones y propiedades principales del modelo cuando est?n disponibles.</li>
-    <li>Revise o complete los campos de la pesta?a <strong>C?lculo</strong>.</li>
+    <li>En la pestaña <strong>RFEM 6</strong> pulse <strong>LEER MODELO DE RFEM 6</strong>.</li>
+    <li>La aplicación intenta primero leer el <strong>modelo activo</strong> de RFEM.</li>
+    <li>Si RFEM no tiene un modelo abierto, la aplicación le pide al usuario seleccionar un archivo <code>.rf6</code>.</li>
+    <li>Una vez seleccionado, la aplicación lo <strong>abre en RFEM</strong> desde el propio script y luego lee sus datos automáticamente.</li>
+    <li>La interfaz completa los IDs de members tendón, cantidad de members, cantidad de cordones y propiedades principales del modelo cuando están disponibles.</li>
+    <li>Revise o complete los campos de la pestaña <strong>Cálculo</strong>.</li>
     <li>Pulse <strong>Calcular</strong>.</li>
-    <li>Revise tensiones, fuerzas, p?rdidas y lectura para RFEM 6.</li>
+    <li>Revise tensiones, fuerzas, pérdidas y lectura para RFEM 6.</li>
     <li>Si el resultado es correcto, pulse <strong>Aplicar en RFEM</strong>.</li>
   </ol>
 
   <h2>6. Estructura de la interfaz</h2>
-  <h3>6.1 Pesta?a RFEM 6</h3>
+  <h3>6.1 Pestaña RFEM 6</h3>
   <ul>
-    <li>Bot?n principal <strong>LEER MODELO DE RFEM 6</strong>.</li>
-    <li>L?nea <strong>Modelo cargado</strong> con el nombre del modelo activo o abierto.</li>
-    <li><strong>IDs de members tend?n</strong>, <strong>Cantidad de members</strong> y <strong>Cantidad de cordones</strong>.</li>
-    <li>Botones: <strong>Probar conexi?n</strong>, <strong>Volver a leer modelo</strong>, <strong>Autocompletar</strong> y <strong>Aplicar en RFEM</strong>.</li>
+    <li>Botón principal <strong>LEER MODELO DE RFEM 6</strong>.</li>
+    <li>Línea <strong>Modelo cargado</strong> con el nombre del modelo activo o abierto.</li>
+    <li><strong>IDs de members tendón</strong>, <strong>Cantidad de members</strong> y <strong>Cantidad de cordones</strong>.</li>
+    <li>Botones: <strong>Probar conexión</strong>, <strong>Volver a leer modelo</strong>, <strong>Autocompletar</strong> y <strong>Aplicar en RFEM</strong>.</li>
   </ul>
 
-  <h3>6.2 Pesta?a C?lculo</h3>
+  <h3>6.2 Pestaña Cálculo</h3>
   <p>Permite ingresar o corregir manualmente:</p>
   <ul>
     <li>Propiedades del acero de postensado: <code>Ep</code>, <code>fpk</code>, <code>fp01k</code>, <code>Ap</code>.</li>
-    <li>Propiedades del hormig?n: <code>Ec</code>, <code>fc</code>.</li>
-    <li>Datos geom?tricos, de tesado y de p?rdidas.</li>
+    <li>Propiedades del hormigón: <code>Ec</code>, <code>fc</code>.</li>
+    <li>Datos geométricos, de tesado y de pérdidas.</li>
   </ul>
 
   <h3>6.3 Panel de resultados</h3>
   <ul>
-    <li>Tarjetas de datos t?cnicos.</li>
+    <li>Tarjetas de datos técnicos.</li>
     <li>Resumen ejecutivo.</li>
-    <li>Desglose de p?rdidas en porcentaje para presentaci?n.</li>
+    <li>Desglose de pérdidas en porcentaje para presentación.</li>
     <li>Lectura para RFEM 6 con scroll vertical.</li>
-    <li>Bot?n <strong>Exportar CSV</strong>.</li>
+    <li>Botón <strong>Exportar CSV</strong>.</li>
   </ul>
 
-  <h2>7. Integraci?n con la API de Dlubal</h2>
-  <p>La integraci?n utiliza la API oficial de Dlubal para RFEM 6. El flujo implementado en la aplicaci?n sigue esta l?gica:</p>
+  <h2>7. Integración con la API de Dlubal</h2>
+  <p>La integración utiliza la API oficial de Dlubal para RFEM 6. El flujo implementado en la aplicación sigue esta lógica:</p>
   <ol>
     <li>Conectarse a RFEM mediante gRPC usando la API key configurada.</li>
     <li>Consultar si existe un modelo activo.</li>
     <li>Si existe, usar ese modelo.</li>
     <li>Si no existe, abrir el archivo <code>.rf6</code> seleccionado por el usuario.</li>
-    <li>Leer members tipo tend?n, secci?n, material del tend?n y material de hormig?n principal.</li>
+    <li>Leer members tipo tendón, sección, material del tendón y material de hormigón principal.</li>
     <li>Crear los casos de carga necesarios y aplicar las deformaciones axiales equivalentes.</li>
   </ol>
-  <p>Documentaci?n oficial consultada:</p>
+  <p>Documentación oficial consultada:</p>
   <ul>
-    <li><a href="https://www.dlubal.com/es/productos/api-de-dlubal/documentacion-de-la-api/index">Documentaci?n general de la API de Dlubal</a></li>
+    <li><a href="https://www.dlubal.com/es/productos/api-de-dlubal/documentacion-de-la-api/index">Documentación general de la API de Dlubal</a></li>
     <li><a href="https://apidocs.dlubal.com/quick_start.html">Quick Start</a></li>
     <li><a href="https://apidocs.dlubal.com/access_control.html">Access Control / API Keys</a></li>
     <li><a href="https://apidocs.dlubal.com/starting_server.html">Starting Server</a></li>
   </ul>
 
-  <h2>8. Aplicaci?n autom?tica en RFEM</h2>
-  <p>La aplicaci?n autom?tica trabaja actualmente sobre <strong>members/barra</strong> tipo tend?n. El modelo global puede contener superficies, pero la deformaci?n axial equivalente se aplica al tend?n modelado como member.</p>
-  <p>La numeraci?n de casos de carga y cargas de miembro se resuelve autom?ticamente buscando el pr?ximo n?mero libre del modelo.</p>
+  <h2>8. Aplicación automática en RFEM</h2>
+  <p>La aplicación automática trabaja actualmente sobre <strong>members/barra</strong> tipo tendón. El modelo global puede contener superficies, pero la deformación axial equivalente se aplica al tendón modelado como member.</p>
+  <p>La numeración de casos de carga y cargas de miembro se resuelve automáticamente buscando el próximo número libre del modelo.</p>
 
   <h2>9. Notas sobre fiabilidad del resultado</h2>
   <div class="box">
-    Esta herramienta es adecuada para estimaci?n preliminar, comparaci?n de escenarios y generaci?n de estados equivalentes para RFEM. No sustituye una verificaci?n normativa completa ni un modelo detallado de p?rdidas secuenciales.
+    Esta herramienta es adecuada para estimación preliminar, comparación de escenarios y generación de estados equivalentes para RFEM. No sustituye una verificación normativa completa ni un modelo detallado de pérdidas secuenciales.
   </div>
-  <p>Si las p?rdidas totales resultan inusualmente altas, revise especialmente:</p>
+  <p>Si las pérdidas totales resultan inusualmente altas, revise especialmente:</p>
   <ul>
     <li><code>anchorage_slip_mm</code> respecto de <code>tendon_length</code>.</li>
     <li><code>mu_fric</code>, <code>k_wobble</code> y <code>theta_total</code>.</li>
@@ -157,14 +157,14 @@
     <li><code>relaxation_loss_ratio</code>.</li>
   </ul>
 
-  <h2>10. Soluci?n de problemas</h2>
+  <h2>10. Solución de problemas</h2>
   <ul>
-    <li><strong>No se conecta a RFEM:</strong> revise que RFEM est? abierto, que el servicio API est? activo y que el puerto sea correcto.</li>
+    <li><strong>No se conecta a RFEM:</strong> revise que RFEM esté abierto, que el servicio API esté activo y que el puerto sea correcto.</li>
     <li><strong>No hay modelo activo:</strong> pulse <strong>LEER MODELO DE RFEM 6</strong> y seleccione el archivo cuando se lo solicite.</li>
-    <li><strong>No se detectan tendones:</strong> verifique que el tend?n est? modelado como member/barra y no solo como superficie.</li>
-    <li><strong>Faltan datos autom?ticos:</strong> revise si la secci?n o el material del tend?n exponen esas propiedades en la API del modelo.</li>
+    <li><strong>No se detectan tendones:</strong> verifique que el tendón esté modelado como member/barra y no solo como superficie.</li>
+    <li><strong>Faltan datos automáticos:</strong> revise si la sección o el material del tendón exponen esas propiedades en la API del modelo.</li>
   </ul>
 
-  <p class="small">Manual actualizado para el flujo actual de la aplicaci?n.</p>
+  <p class="small">Manual actualizado para el flujo actual de la aplicación.</p>
 </body>
 </html>

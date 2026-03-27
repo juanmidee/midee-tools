@@ -5,7 +5,10 @@ import re
 import unicodedata
 from typing import Any
 
-from google.protobuf.json_format import MessageToDict
+try:
+    from google.protobuf.json_format import MessageToDict
+except ModuleNotFoundError:
+    MessageToDict = None
 
 from pt_losses.services.rfem_conversion import RfemLoadCasePayload
 
@@ -244,12 +247,12 @@ class Rfem6ApiAdapter:
             if load_case_class is None or member_load_class is None:
                 raise RuntimeError("La API instalada no expone LoadCase o MemberLoad.")
 
-            used_load_case_nos = self._used_object_numbers(app, rfem.OBJECT_TYPE_LOAD_CASE)
             used_member_load_nos = self._used_object_numbers(app, rfem.OBJECT_TYPE_MEMBER_LOAD)
+            next_load_case_candidate = load_case_start_no
 
             for index, payload in enumerate(payloads):
-                load_case_no = self._next_free_number(used_load_case_nos, load_case_start_no + index)
-                used_load_case_nos.add(load_case_no)
+                load_case_no = self._next_free_load_case_no(app, next_load_case_candidate)
+                next_load_case_candidate = load_case_no + 1
                 member_load_no = self._next_free_number(used_member_load_nos, member_load_start_no + index)
                 used_member_load_nos.add(member_load_no)
                 deformacion = payload.deformacion_axial(strain_unit) * strain_scale
@@ -391,9 +394,11 @@ class Rfem6ApiAdapter:
         raw_items = list(getattr(object_ids, "object_id", [])) or list(getattr(object_ids, "rows", []))
         used_numbers: set[int] = set()
         for item in raw_items:
-            no = getattr(item, "no", None)
-            if isinstance(no, int):
+            no = self._extract_object_number(item)
+            if no is not None:
                 used_numbers.add(no)
+        if not used_numbers and object_type == getattr(rfem, "OBJECT_TYPE_LOAD_CASE", None):
+            used_numbers = self._probe_existing_load_case_numbers(app)
         return used_numbers
 
     @staticmethod
@@ -403,8 +408,84 @@ class Rfem6ApiAdapter:
             candidate += 1
         return candidate
 
+    def _next_free_load_case_no(self, app: Any, requested_no: int) -> int:
+        load_case_class = getattr(getattr(rfem, "loading", None), "LoadCase", None)
+        if load_case_class is None:
+            raise RuntimeError("No se encontro rfem.loading.LoadCase en la API instalada.")
+
+        candidate = max(1, int(requested_no))
+        while True:
+            try:
+                obj = app.get_object(load_case_class(no=candidate))
+            except Exception:
+                return candidate
+            if obj is None:
+                return candidate
+            candidate += 1
+
     def _next_free_object_no(self, app: Any, object_type: int, requested_no: int) -> int:
         return self._next_free_number(self._used_object_numbers(app, object_type), requested_no)
+
+    def _probe_existing_load_case_numbers(self, app: Any) -> set[int]:
+        load_case_class = getattr(getattr(rfem, "loading", None), "LoadCase", None)
+        if load_case_class is None:
+            return set()
+
+        used_numbers: set[int] = set()
+        consecutive_misses = 0
+        candidate = 1
+        max_candidate = 5000
+        max_consecutive_misses = 250
+
+        while candidate <= max_candidate and consecutive_misses < max_consecutive_misses:
+            try:
+                obj = app.get_object(load_case_class(no=candidate))
+            except Exception:
+                consecutive_misses += 1
+            else:
+                if obj is not None:
+                    used_numbers.add(candidate)
+                    consecutive_misses = 0
+                else:
+                    consecutive_misses += 1
+            candidate += 1
+
+        return used_numbers
+
+    @classmethod
+    def _extract_object_number(cls, item: Any) -> int | None:
+        if isinstance(item, bool):
+            return None
+        if isinstance(item, int):
+            return item
+        if isinstance(item, float) and item.is_integer():
+            return int(item)
+        if isinstance(item, dict):
+            for key in ("no", "object_no", "id", "object_id"):
+                value = item.get(key)
+                if isinstance(value, int):
+                    return value
+                if isinstance(value, float) and value.is_integer():
+                    return int(value)
+        no = getattr(item, "no", None)
+        if isinstance(no, int):
+            return no
+        if isinstance(no, float) and no.is_integer():
+            return int(no)
+        item_id = getattr(item, "id", None)
+        if isinstance(item_id, int):
+            return item_id
+        if isinstance(item_id, float) and item_id.is_integer():
+            return int(item_id)
+        payload = cls._to_jsonable(item)
+        if isinstance(payload, dict):
+            for key in ("no", "object_no", "id", "object_id"):
+                value = payload.get(key)
+                if isinstance(value, int):
+                    return value
+                if isinstance(value, float) and value.is_integer():
+                    return int(value)
+        return None
 
     def _build_member_load(
         self,
@@ -849,7 +930,8 @@ class Rfem6ApiAdapter:
         if isinstance(value, (list, tuple, set)):
             return [cls._to_jsonable(item) for item in value]
         if hasattr(value, "DESCRIPTOR"):
-            return cls._to_jsonable(MessageToDict(value, preserving_proto_field_name=True))
+            if MessageToDict is not None:
+                return cls._to_jsonable(MessageToDict(value, preserving_proto_field_name=True))
         if hasattr(value, "ListFields"):
             return {
                 field.name: cls._to_jsonable(field_value)
