@@ -1,0 +1,61 @@
+{
+  "project_name": "Edificio Demo - Losa y Viga",
+  "items": [
+    {
+      "source_type": "member",
+      "source_id": 101,
+      "host_label": "Viga V1",
+      "bar_mark": "V1-01",
+      "diameter_mm": 16,
+      "steel_grade": "ADN 420",
+      "shape_code": "STRAIGHT",
+      "count": 4,
+      "cut_length_mm": 5820,
+      "segments_mm": [5820],
+      "notes": "Inferior continuo"
+    },
+    {
+      "source_type": "member",
+      "source_id": 101,
+      "host_label": "Viga V1",
+      "bar_mark": "V1-02",
+      "diameter_mm": 12,
+      "steel_grade": "ADN 420",
+      "shape_code": "STIRRUP_CLOSED",
+      "count": 22,
+      "cut_length_mm": 1460,
+      "segments_mm": [300, 430, 300, 430],
+      "notes": "Estribo cada 0.15 m"
+    },
+    {
+      "source_type": "surface",
+      "source_id": 201,
+      "host_label": "Losa S1",
+      "bar_mark": "S1-X1",
+      "diameter_mm": 10,
+      "steel_grade": "ADN 420",
+      "shape_code": "STRAIGHT",
+      "count": 37,
+      "cut_length_mm": 4250,
+      "segments_mm": [4250],
+      "direction": "X",
+      "spacing_mm": 150,
+      "notes": "Capa inferior"
+    },
+    {
+      "source_type": "surface",
+      "source_id": 201,
+      "host_label": "Losa S1",
+      "bar_mark": "S1-Y1",
+      "diameter_mm": 10,
+      "steel_grade": "ADN 420",
+      "shape_code": "STRAIGHT",
+      "count": 29,
+      "cut_length_mm": 5100,
+      "segments_mm": [5100],
+      "direction": "Y",
+      "spacing_mm": 180,
+      "notes": "Capa superior"
+    }
+  ]
+}

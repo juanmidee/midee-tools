@@ -10,7 +10,7 @@ try:
 except ModuleNotFoundError:
     MessageToDict = None
 
-from pt_losses.services.rfem_conversion import RfemLoadCasePayload
+from pt_losses.services.rfem_conversion import RFEM_LOAD_MODES, RfemLoadCasePayload
 
 try:
     from dlubal.api import rfem
@@ -230,10 +230,42 @@ class Rfem6ApiAdapter:
         calculate: bool = True,
         save: bool = True,
     ) -> dict[str, object]:
+        return self.aplicar_cargas_postensado(
+            model_path=model_path,
+            tendon_member_nos=tendon_member_nos,
+            payloads=payloads,
+            payload_mode="axial_strain",
+            strain_unit=strain_unit,
+            prestress_force_unit="kN",
+            value_scale=strain_scale,
+            action_start_no=action_start_no,
+            load_case_start_no=load_case_start_no,
+            member_load_start_no=member_load_start_no,
+            calculate=calculate,
+            save=save,
+        )
+
+    def aplicar_cargas_postensado(
+        self,
+        model_path: str | None,
+        tendon_member_nos: list[int],
+        payloads: list[RfemLoadCasePayload],
+        payload_mode: str = "axial_strain",
+        strain_unit: str = "percent",
+        prestress_force_unit: str = "kN",
+        value_scale: float = 1.0,
+        action_start_no: int = 1,
+        load_case_start_no: int = 1,
+        member_load_start_no: int = 1,
+        calculate: bool = True,
+        save: bool = True,
+    ) -> dict[str, object]:
         if rfem is None:
             raise RuntimeError(
                 "La libreria 'dlubal.api' no esta instalada. Instalala con: pip install dlubal.api"
             )
+        if payload_mode not in RFEM_LOAD_MODES:
+            raise ValueError(f"Modo de carga RFEM no soportado: {payload_mode}")
         if not tendon_member_nos:
             raise ValueError("Debes indicar al menos un miembro de tendon para aplicar las cargas.")
 
@@ -248,24 +280,40 @@ class Rfem6ApiAdapter:
                 raise RuntimeError("La API instalada no expone LoadCase o MemberLoad.")
 
             used_member_load_nos = self._used_object_numbers(app, rfem.OBJECT_TYPE_MEMBER_LOAD)
-            next_load_case_candidate = load_case_start_no
+            next_load_case_candidate = max(1, int(load_case_start_no))
 
             for index, payload in enumerate(payloads):
                 load_case_no = self._next_free_load_case_no(app, next_load_case_candidate)
-                next_load_case_candidate = load_case_no + 1
                 member_load_no = self._next_free_number(used_member_load_nos, member_load_start_no + index)
                 used_member_load_nos.add(member_load_no)
-                deformacion = payload.deformacion_axial(strain_unit) * strain_scale
+                (
+                    valor_visible,
+                    unidad_visible,
+                    valor_api,
+                    unidad_api,
+                    load_type_names,
+                    load_type_label,
+                ) = self._resolve_payload_value(
+                    payload=payload,
+                    payload_mode=payload_mode,
+                    strain_unit=strain_unit,
+                    prestress_force_unit=prestress_force_unit,
+                    value_scale=value_scale,
+                )
 
-                load_case_object = self._build_load_case(load_case_no, payload.state_name)
-                app.create_object(load_case_object)
-                app.get_object(load_case_class(no=load_case_no))
+                load_case_no = self._create_load_case_with_retry(
+                    app=app,
+                    state_name=payload.state_name,
+                    requested_no=load_case_no,
+                )
+                next_load_case_candidate = load_case_no + 1
 
                 member_load_object = self._build_member_load(
                     no=member_load_no,
                     load_case_no=load_case_no,
                     members=tendon_member_nos,
-                    magnitude=deformacion,
+                    magnitude=valor_api,
+                    load_type_names=load_type_names,
                 )
                 app.create_object(member_load_object)
 
@@ -274,11 +322,19 @@ class Rfem6ApiAdapter:
                         "caso_carga_no": load_case_no,
                         "carga_miembro_no": member_load_no,
                         "estado_temporal": payload.state_name,
-                        "deformacion_axial": deformacion,
-                        "unidad": strain_unit,
-                        "factor_escala": strain_scale,
+                        "modo_carga": payload_mode,
+                        "tipo_carga": load_type_label,
+                        "valor_visible": valor_visible,
+                        "unidad_visible": unidad_visible,
+                        "valor_enviado_api": valor_api,
+                        "unidad_api": unidad_api,
+                        "factor_escala": value_scale,
                         "miembros": tendon_member_nos,
                         "categoria_objetivo": "Tp",
+                        "deformacion_axial_percent": payload.axial_strain_percent,
+                        "deformacion_axial_permille": payload.axial_strain_permille,
+                        "fuerza_pretensado_kN": payload.prestress_force_kn,
+                        "tension_referencia_MPa": payload.prestress_stress_mpa,
                     }
                 )
 
@@ -301,9 +357,51 @@ class Rfem6ApiAdapter:
             "api_key_name": self.api_key_name,
             "puerto": self.port,
             "modo_creacion": "casos_tp_independientes",
+            "modo_carga": payload_mode,
             "casos": created_cases,
             "lectura_rfem": lectura_rfem,
+            "observaciones": [
+                "La documentacion de Dlubal para tendones indica que el postensado se describe actualmente de forma nativa como deformacion longitudinal.",
+                "El modo de fuerza de pretensado se ofrece como alternativa para miembros/barra cuando la API y el modelo admiten Initial/End Prestress.",
+            ],
         }
+
+    @staticmethod
+    def _resolve_payload_value(
+        payload: RfemLoadCasePayload,
+        payload_mode: str,
+        strain_unit: str,
+        prestress_force_unit: str,
+        value_scale: float,
+    ) -> tuple[float, str, float, str, list[str], str]:
+        if payload_mode == "axial_strain":
+            valor_visible = payload.deformacion_axial(strain_unit) * value_scale
+            valor_api = payload.deformacion_axial("adimensional") * value_scale
+            return (
+                valor_visible,
+                strain_unit,
+                valor_api,
+                "adimensional",
+                ["LOAD_TYPE_AXIAL_STRAIN"],
+                "axial_strain",
+            )
+
+        load_type_names = ["LOAD_TYPE_INITIAL_PRESTRESS", "LOAD_TYPE_PRESTRESS_INITIAL"]
+        load_type_label = "initial_prestress"
+        if payload.state_name.strip().lower() == "tinf":
+            load_type_names = ["LOAD_TYPE_END_PRESTRESS", "LOAD_TYPE_PRESTRESS_END"]
+            load_type_label = "end_prestress"
+
+        valor_visible = payload.fuerza_pretensado(prestress_force_unit) * value_scale
+        valor_api = payload.fuerza_pretensado("N") * value_scale
+        return (
+            valor_visible,
+            prestress_force_unit,
+            valor_api,
+            "N",
+            load_type_names,
+            load_type_label,
+        )
 
     def _application_kwargs(self) -> dict[str, object]:
         if self.api_key_value:
@@ -426,6 +524,43 @@ class Rfem6ApiAdapter:
     def _next_free_object_no(self, app: Any, object_type: int, requested_no: int) -> int:
         return self._next_free_number(self._used_object_numbers(app, object_type), requested_no)
 
+    def _create_load_case_with_retry(self, app: Any, state_name: str, requested_no: int) -> int:
+        load_case_class = getattr(getattr(rfem, "loading", None), "LoadCase", None)
+        if load_case_class is None:
+            raise RuntimeError("No se encontro rfem.loading.LoadCase en la API instalada.")
+
+        candidate = max(1, int(requested_no))
+        attempts = 0
+        while attempts < 5000:
+            try:
+                load_case_object = self._build_load_case(candidate, state_name)
+                app.create_object(load_case_object)
+                app.get_object(load_case_class(no=candidate))
+                return candidate
+            except Exception as exc:
+                if not self._looks_like_existing_object_error(exc):
+                    raise
+                candidate += 1
+                attempts += 1
+
+        raise RuntimeError("No fue posible encontrar un numero libre para crear el caso de carga.")
+
+    @staticmethod
+    def _looks_like_existing_object_error(exc: Exception) -> bool:
+        message = str(exc).lower()
+        return any(
+            pattern in message
+            for pattern in (
+                "ya existe",
+                "already exists",
+                "failed to create caso de carga",
+                "failed to create load case",
+                "caso de carga n?m.",
+                "caso de carga num.",
+                "load case no.",
+            )
+        ) and ("existe" in message or "exists" in message)
+
     def _probe_existing_load_case_numbers(self, app: Any) -> set[int]:
         load_case_class = getattr(getattr(rfem, "loading", None), "LoadCase", None)
         if load_case_class is None:
@@ -493,6 +628,7 @@ class Rfem6ApiAdapter:
         load_case_no: int,
         members: list[int],
         magnitude: float,
+        load_type_names: list[str],
     ) -> Any:
         member_load_class = getattr(rfem.loads, "MemberLoad", None)
         if member_load_class is None:
@@ -502,7 +638,7 @@ class Rfem6ApiAdapter:
             "no": no,
             "load_case": load_case_no,
             "members": members,
-            "load_type": self._enum_value(member_load_class, ["LOAD_TYPE_AXIAL_STRAIN"]),
+            "load_type": self._enum_value(member_load_class, load_type_names),
             "load_distribution": self._enum_value(member_load_class, ["LOAD_DISTRIBUTION_UNIFORM"]),
             "load_direction": self._enum_value(
                 member_load_class,
@@ -513,9 +649,17 @@ class Rfem6ApiAdapter:
         attempts = [
             {**kwargs_common, "magnitude": magnitude},
             {**kwargs_common, "magnitude_1": magnitude},
-            {**kwargs_common, "axial_strain": magnitude},
-            {**kwargs_common, "strain": magnitude},
+            {**kwargs_common, "force": magnitude},
+            {**kwargs_common, "prestressing_force": magnitude},
+            {**kwargs_common, "prestress_force": magnitude},
         ]
+        if "LOAD_TYPE_AXIAL_STRAIN" in load_type_names:
+            attempts.extend(
+                [
+                    {**kwargs_common, "axial_strain": magnitude},
+                    {**kwargs_common, "strain": magnitude},
+                ]
+            )
 
         last_error: Exception | None = None
         for attempt in attempts:
@@ -525,8 +669,8 @@ class Rfem6ApiAdapter:
                 last_error = error
 
         raise RuntimeError(
-            "No fue posible construir la carga de deformacion axial con la firma disponible en dlubal.api. "
-            f"Ultimo error: {last_error}"
+            "No fue posible construir la carga de miembro con la firma disponible en dlubal.api. "
+            f"Tipos intentados: {', '.join(load_type_names)}. Ultimo error: {last_error}"
         )
 
     def _leer_objetos_creados(
@@ -754,6 +898,11 @@ class Rfem6ApiAdapter:
                 "magnitude": data.get("magnitude"),
                 "magnitude_1": data.get("magnitude_1"),
                 "magnitude_2": data.get("magnitude_2"),
+                "force": data.get("force"),
+                "prestressing_force": data.get("prestressing_force"),
+                "prestress_force": data.get("prestress_force"),
+                "axial_strain": data.get("axial_strain"),
+                "strain": data.get("strain"),
                 "members": data.get("members"),
             }
         return {"detalle": data}

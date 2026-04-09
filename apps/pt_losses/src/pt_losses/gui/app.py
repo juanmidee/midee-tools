@@ -13,7 +13,12 @@ from pt_losses.adapters.rfem_client import Rfem6ApiAdapter
 from pt_losses.domain.models import LossesInput
 from pt_losses.services.calculator import calculate_losses
 from pt_losses.services.io import load_input_file, write_result_file
-from pt_losses.services.rfem_conversion import build_rfem_load_payload
+from pt_losses.services.rfem_conversion import (
+    RFEM_LOAD_MODES,
+    RFEM_PRESTRESS_FORCE_UNITS,
+    RFEM_STRAIN_UNITS,
+    build_rfem_load_payload,
+)
 
 DEFAULT_INPUT: dict[str, float] = {
     "Ep": 195000.0,
@@ -117,7 +122,9 @@ class PtLossesApp:
         self.api_dialog: tk.Toplevel | None = None
         self.api_visibility_var = tk.BooleanVar(value=False)
         self.rfem_port_var = tk.StringVar(value="9000")
+        self.rfem_mode_var = tk.StringVar(value="axial_strain")
         self.rfem_unit_var = tk.StringVar(value="adimensional")
+        self.rfem_prestress_unit_var = tk.StringVar(value="kN")
         self.rfem_status_var = tk.StringVar(value="RFEM aún no conectado desde la interfaz.")
         self.logo_image: tk.PhotoImage | None = None
 
@@ -414,18 +421,38 @@ class PtLossesApp:
         self._add_rfem_row(card, 4, "Cantidad de cordones", self.rfem_cordones_count_var)
         self._add_rfem_row(card, 5, "Puerto", self.rfem_port_var)
 
-        ttk.Label(card, text="Unidad RFEM", style="Field.TLabel").grid(row=6, column=0, sticky="w", pady=7, padx=(0, 12))
-        unit_combo = ttk.Combobox(
+        ttk.Label(card, text="Modo de carga", style="Field.TLabel").grid(row=6, column=0, sticky="w", pady=7, padx=(0, 12))
+        mode_combo = ttk.Combobox(
             card,
-            textvariable=self.rfem_unit_var,
-            values=["adimensional", "percent"],
+            textvariable=self.rfem_mode_var,
+            values=list(RFEM_LOAD_MODES),
             state="readonly",
             width=20,
         )
-        unit_combo.grid(row=6, column=1, sticky="ew", pady=7)
+        mode_combo.grid(row=6, column=1, sticky="ew", pady=7)
+
+        ttk.Label(card, text="Unidad deformacion", style="Field.TLabel").grid(row=7, column=0, sticky="w", pady=7, padx=(0, 12))
+        unit_combo = ttk.Combobox(
+            card,
+            textvariable=self.rfem_unit_var,
+            values=list(RFEM_STRAIN_UNITS),
+            state="readonly",
+            width=20,
+        )
+        unit_combo.grid(row=7, column=1, sticky="ew", pady=7)
+
+        ttk.Label(card, text="Unidad pretensado", style="Field.TLabel").grid(row=8, column=0, sticky="w", pady=7, padx=(0, 12))
+        prestress_unit_combo = ttk.Combobox(
+            card,
+            textvariable=self.rfem_prestress_unit_var,
+            values=list(RFEM_PRESTRESS_FORCE_UNITS),
+            state="readonly",
+            width=20,
+        )
+        prestress_unit_combo.grid(row=8, column=1, sticky="ew", pady=7)
 
         hints = ttk.Frame(card, style="Card.TFrame")
-        hints.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(10, 10))
+        hints.grid(row=9, column=0, columnspan=3, sticky="ew", pady=(10, 10))
         hints.columnconfigure(0, weight=1)
         ttk.Label(
             hints,
@@ -435,7 +462,7 @@ class PtLossesApp:
         ).grid(row=0, column=0, sticky="w")
 
         buttons = ttk.Frame(card, style="Card.TFrame")
-        buttons.grid(row=10, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        buttons.grid(row=12, column=0, columnspan=3, sticky="ew", pady=(10, 0))
         buttons.columnconfigure((0, 1), weight=1)
         buttons.columnconfigure((2, 3), weight=1)
 
@@ -453,7 +480,7 @@ class PtLossesApp:
         )
 
         ttk.Label(card, textvariable=self.rfem_status_var, style="CardBody.TLabel", wraplength=500).grid(
-            row=11, column=0, columnspan=3, sticky="w", pady=(14, 0)
+            row=13, column=0, columnspan=3, sticky="w", pady=(14, 0)
         )
 
     def _add_rfem_row(
@@ -784,12 +811,14 @@ class PtLossesApp:
                 if not self.rfem_members_var.get().strip():
                     return
             payloads = build_rfem_load_payload(self.current_result)
-            rfem_result = adapter.aplicar_deformaciones_axiales(
+            rfem_result = adapter.aplicar_cargas_postensado(
                 model_path=self.rfem_model_var.get().strip() or None,
                 tendon_member_nos=self._parse_member_numbers(self.rfem_members_var.get()),
                 payloads=payloads,
+                payload_mode=self.rfem_mode_var.get().strip(),
                 strain_unit=self.rfem_unit_var.get().strip(),
-                strain_scale=1.0,
+                prestress_force_unit=self.rfem_prestress_unit_var.get().strip(),
+                value_scale=1.0,
             )
         except Exception as error:
             self.rfem_status_var.set(f"No se pudo aplicar en RFEM: {error}")
@@ -932,7 +961,9 @@ class PtLossesApp:
             f"epsilon_T0               {rfem['T0_percent'] / 100.0:.8f}",
             f"epsilon_Tinf             {rfem['Tinf_percent'] / 100.0:.8f}",
             "",
-            f"Unidad activa GUI        {self.rfem_unit_var.get()}",
+            f"Modo carga GUI           {self.rfem_mode_var.get()}",
+            f"Unidad deformacion GUI   {self.rfem_unit_var.get()}",
+            f"Unidad pretensado GUI    {self.rfem_prestress_unit_var.get()}",
             f"Members tendón (IDs)     {self.rfem_members_var.get().strip() or '-'}",
             f"Cantidad members         {self.rfem_member_count_var.get().strip() or '-'}",
             f"Cantidad cordones        {self.rfem_cordones_count_var.get().strip() or '-'}",
@@ -979,13 +1010,16 @@ class PtLossesApp:
                 "",
                 "Estado del envío a RFEM",
                 f"Modo                     {rfem_result.get('modo_creacion', 'sin dato')}",
+                f"Modo carga               {rfem_result.get('modo_carga', 'sin dato')}",
                 f"Modelo                   {rfem_result.get('modelo', 'sin dato')}",
                 f"Puerto                   {rfem_result.get('puerto', 'sin dato')}",
             ])
             casos = rfem_result.get("casos", [])
             if isinstance(casos, list):
                 for caso in casos:
-                    lines.append(f"Caso {caso.get('caso_carga_no')} -> {caso.get('estado_temporal')} -> e = {caso.get('deformacion_axial')}")
+                    lines.append(
+                        f"Caso {caso.get('caso_carga_no')} -> {caso.get('estado_temporal')} -> {caso.get('tipo_carga')} = {caso.get('valor_visible')} {caso.get('unidad_visible')} | API: {caso.get('valor_enviado_api')} {caso.get('unidad_api')}"
+                    )
 
         return "\n".join(lines)
 
@@ -1024,6 +1058,9 @@ class PtLossesApp:
         self.rfem_model_var.set("")
         self.rfem_model_name_var.set("Ningún modelo seleccionado.")
         self.rfem_port_var.set(str(data.get("rfem_port", "9000")))
+        self.rfem_mode_var.set(str(data.get("rfem_mode", "axial_strain")))
+        self.rfem_unit_var.set(str(data.get("rfem_strain_unit", "adimensional")))
+        self.rfem_prestress_unit_var.set(str(data.get("rfem_prestress_unit", "kN")))
 
     def _save_settings(self) -> None:
         path = self._settings_path()
@@ -1031,6 +1068,9 @@ class PtLossesApp:
         data = {
             "rfem_api_key": self.rfem_api_key_var.get().strip(),
             "rfem_port": self.rfem_port_var.get().strip(),
+            "rfem_mode": self.rfem_mode_var.get().strip(),
+            "rfem_strain_unit": self.rfem_unit_var.get().strip(),
+            "rfem_prestress_unit": self.rfem_prestress_unit_var.get().strip(),
         }
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 

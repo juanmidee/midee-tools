@@ -8,7 +8,12 @@ from pt_losses.adapters.rfem_client import Rfem6ApiAdapter
 from pt_losses.adapters.rfem_stub import Rfem6AdapterStub
 from pt_losses.services.calculator import calculate_losses
 from pt_losses.services.io import load_input_file, write_result_file
-from pt_losses.services.rfem_conversion import build_rfem_load_payload
+from pt_losses.services.rfem_conversion import (
+    RFEM_LOAD_MODES,
+    RFEM_PRESTRESS_FORCE_UNITS,
+    RFEM_STRAIN_UNITS,
+    build_rfem_load_payload,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,16 +71,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Puerto del servicio gRPC de RFEM.",
     )
     parser.add_argument(
+        "--modo-carga-rfem",
+        choices=list(RFEM_LOAD_MODES),
+        default="axial_strain",
+        help="Modo de incorporacion en RFEM: deformacion axial equivalente o fuerza de pretensado.",
+    )
+    parser.add_argument(
         "--unidad-deformacion-rfem",
-        choices=["percent", "adimensional"],
+        choices=list(RFEM_STRAIN_UNITS),
         default="adimensional",
         help="Unidad enviada a RFEM para la deformacion axial equivalente.",
+    )
+    parser.add_argument(
+        "--unidad-pretensado-rfem",
+        choices=list(RFEM_PRESTRESS_FORCE_UNITS),
+        default="kN",
+        help="Unidad enviada a RFEM para la fuerza de pretensado.",
     )
     parser.add_argument(
         "--factor-escala-rfem",
         type=float,
         default=1.0,
-        help="Factor multiplicador adicional aplicado a la deformacion enviada a RFEM.",
+        help="Factor multiplicador adicional aplicado a la carga enviada a RFEM.",
     )
     parser.add_argument(
         "--inicio-acciones-rfem",
@@ -124,12 +141,14 @@ def run(argv: list[str] | None = None) -> int:
             parser.error("Debes indicar --miembros-tendon para aplicar las cargas en RFEM.")
 
         adapter = Rfem6ApiAdapter(api_key_name=args.api_key_name, port=args.puerto_rfem)
-        payload["rfem_real"] = adapter.aplicar_deformaciones_axiales(
+        payload["rfem_real"] = adapter.aplicar_cargas_postensado(
             model_path=args.modelo_rfem,
             tendon_member_nos=args.miembros_tendon,
             payloads=payloads,
+            payload_mode=args.modo_carga_rfem,
             strain_unit=args.unidad_deformacion_rfem,
-            strain_scale=args.factor_escala_rfem,
+            prestress_force_unit=args.unidad_pretensado_rfem,
+            value_scale=args.factor_escala_rfem,
             action_start_no=args.inicio_acciones_rfem,
             load_case_start_no=args.inicio_casos_carga_rfem,
             member_load_start_no=args.inicio_cargas_miembro_rfem,
@@ -142,4 +161,3 @@ def run(argv: list[str] | None = None) -> int:
         write_result_file(args.output, payload)
 
     return 0
-
